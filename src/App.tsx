@@ -61,6 +61,7 @@ import EarlyAccessModal from "./components/EarlyAccessModal";
 import { PRICING_CONFIG } from "./pricingConfig";
 import { loadSubscriptionState, saveSubscriptionState, recordSearch, checkFeatureAccess } from "./utils/subscriptionManager";
 import { ENABLE_PREMIUM } from "./premiumConfig";
+import { Analytics } from "@vercel/analytics/react";
 
 // 4 high-fidelity curated tracks for landing page showcase containing preset acoustic Mood DNA
 const landingPopularTracks = [
@@ -4731,6 +4732,7 @@ Explore the full analysis & recommendations on MoodLoop:
         onClose={() => setIsEarlyAccessModalOpen(false)}
       />
 
+      <Analytics />
     </div>
   );
 }
