@@ -1,0 +1,66 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;900&family=Inter:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;500;700&family=Instrument+Serif:ital,wght@0,400;1,400&family=Syne:wght@700;800&family=Caveat:wght@450;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=DM+Serif+Display&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-serif: "Instrument Serif", Georgia, serif;
+  --font-syne: "Syne", sans-serif;
+  --font-handwritten: "Caveat", cursive;
+  --font-playfair: "Playfair Display", serif;
+  --font-editorial: "DM Serif Display", serif;
+}
+
+/* Custom continuous scrolling animations & custom glassmorphism styles */
+@layer utilities {
+  .glass {
+    background: rgba(23, 23, 23, 0.6);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .glass-hover:hover {
+    background: rgba(38, 38, 38, 0.7);
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+  .glass-card {
+    background: rgba(18, 18, 18, 0.45);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+  /* Compact floating player waveform bar animations */
+  .animate-bar-1 {
+    transform-origin: bottom;
+    animation: bounce-bar 0.9s ease-in-out infinite alternate;
+  }
+  .animate-bar-2 {
+    transform-origin: bottom;
+    animation: bounce-bar 0.6s ease-in-out infinite alternate 0.15s;
+  }
+  .animate-bar-3 {
+    transform-origin: bottom;
+    animation: bounce-bar 0.8s ease-in-out infinite alternate 0.3s;
+  }
+  .animate-bar-4 {
+    transform-origin: bottom;
+    animation: bounce-bar 0.7s ease-in-out infinite alternate 0.05s;
+  }
+
+  .animate-spin-slow {
+    animation: spin 12s linear infinite;
+  }
+
+  .animate-pulse-slow {
+    animation: pulse 6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+}
+
+@keyframes bounce-bar {
+  0% {
+    transform: scaleY(0.2);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+

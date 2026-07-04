@@ -1,0 +1,6 @@
+{
+  "name": "MoodLoop",
+  "description": "Discover songs that feel emotionally similar to your favorites.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
