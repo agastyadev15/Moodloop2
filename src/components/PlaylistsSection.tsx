@@ -23,6 +23,7 @@ import {
 import { Playlist, PlaylistSong, SongItem } from "../types";
 import { ThemePalette } from "../utils/theme";
 import SongSearch from "./SongSearch";
+import { SpotifyLogo } from "./BrandLogos";
 import { UserSubscriptionState } from "../utils/subscriptionManager";
 import { SubscriptionPlan } from "../pricingConfig";
 
@@ -42,6 +43,16 @@ interface PlaylistsSectionProps {
   onReturnToStudio: () => void;
   subscriptionState?: UserSubscriptionState;
   onGateFeature?: (capability: keyof SubscriptionPlan["capabilities"], featureName: string) => boolean;
+  spotifyConnected?: boolean;
+  spotifyUser?: { displayName: string; id: string } | null;
+  spotifyConnectionStatus?: string | null;
+  onConnectSpotify?: () => void;
+  onExportPlaylistToSpotify?: (playlist: Playlist) => Promise<{
+    playlistUrl: string;
+    playlistName: string;
+    totalMatched: number;
+    totalRequested: number;
+  }>;
 }
 
 interface MoodMixTrack {
@@ -93,7 +104,12 @@ export default function PlaylistsSection({
   palette,
   onReturnToStudio,
   subscriptionState,
-  onGateFeature
+  onGateFeature,
+  spotifyConnected = false,
+  spotifyUser,
+  spotifyConnectionStatus,
+  onConnectSpotify,
+  onExportPlaylistToSpotify
 }: PlaylistsSectionProps) {
   const [activeSection, setActiveSection] = useState<"custom" | "moodmix">("custom");
   const [activePlaylistId, setActivePlaylistId] = useState<string | null>(null);
@@ -101,6 +117,14 @@ export default function PlaylistsSection({
   const [newPlaylistName, setNewPlaylistName] = useState("");
   const [newPlaylistDesc, setNewPlaylistDesc] = useState("");
   const [successToast, setSuccessToast] = useState<string | null>(null);
+  const [isSpotifyExporting, setIsSpotifyExporting] = useState(false);
+  const [spotifyExportResult, setSpotifyExportResult] = useState<{
+    playlistUrl: string;
+    playlistName: string;
+    totalMatched: number;
+    totalRequested: number;
+  } | null>(null);
+  const [spotifyExportError, setSpotifyExportError] = useState<string | null>(null);
 
   // MoodMix Generator states
   const [selectedAesthetic, setSelectedAesthetic] = useState<string>("nightdrive");
@@ -118,6 +142,11 @@ export default function PlaylistsSection({
   const [showSavedFeedback, setShowSavedFeedback] = useState<boolean>(false);
 
   const activePlaylist = playlists.find((p) => p.id === activePlaylistId);
+
+  useEffect(() => {
+    setSpotifyExportResult(null);
+    setSpotifyExportError(null);
+  }, [activePlaylistId]);
 
   const triggerToast = (msg: string) => {
     setSuccessToast(msg);
@@ -142,6 +171,26 @@ export default function PlaylistsSection({
   const handleAddFromSearch = (playlistId: string, song: SongItem) => {
     onAddSongToPlaylist(playlistId, song);
     triggerToast(`Added "${song.name}" to playlist`);
+  };
+
+  const handleExportActivePlaylist = async () => {
+    if (!activePlaylist || !onExportPlaylistToSpotify) return;
+
+    setIsSpotifyExporting(true);
+    setSpotifyExportResult(null);
+    setSpotifyExportError(null);
+
+    try {
+      const result = await onExportPlaylistToSpotify(activePlaylist);
+      setSpotifyExportResult(result);
+      triggerToast(`Exported "${activePlaylist.name}" to Spotify.`);
+    } catch (error: any) {
+      console.error("Spotify playlist export error:", error);
+      setSpotifyExportError(error.message || "Could not export this playlist to Spotify.");
+      triggerToast("Could not export this playlist right now.");
+    } finally {
+      setIsSpotifyExporting(false);
+    }
   };
 
   const formatTimeAdded = (timestamp: number) => {
@@ -493,6 +542,58 @@ export default function PlaylistsSection({
                       <span>✨ {activePlaylist?.songs.length} Tracks in this loop</span>
                       <span>Created {activePlaylist && new Date(activePlaylist.createdAt).toLocaleString()}</span>
                     </div>
+
+                    <div className="rounded-2xl border border-[#ECECEC] bg-[#F5F5F3]/60 p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-mono uppercase tracking-widest text-[#6B6B6B] font-bold">
+                          Spotify export
+                        </p>
+                        <p className="text-xs text-[#6B6B6B] font-medium">
+                          {spotifyConnected
+                            ? `Connected as ${spotifyUser?.displayName || "your Spotify account"}.`
+                            : "Connect your Spotify account to turn this custom playlist into a new Spotify playlist."}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          onClick={spotifyConnected ? handleExportActivePlaylist : onConnectSpotify}
+                          disabled={isSpotifyExporting || !activePlaylist?.songs.length}
+                          className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-3.5 py-2 text-[11px] font-bold transition-all ${
+                            spotifyConnected
+                              ? "bg-[#1DB954] hover:bg-[#1aa34a] text-white"
+                              : "bg-[#111111] hover:bg-neutral-800 text-white"
+                          } ${isSpotifyExporting || !activePlaylist?.songs.length ? "opacity-70 cursor-not-allowed" : "cursor-pointer"}`}
+                        >
+                          <SpotifyLogo size={13} className="shrink-0" />
+                          {isSpotifyExporting
+                            ? "Exporting..."
+                            : spotifyConnected
+                              ? "Export to Spotify"
+                              : "Connect Spotify"}
+                        </button>
+
+                        {spotifyExportResult && (
+                          <a
+                            href={spotifyExportResult.playlistUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 rounded-xl border border-[#ECECEC] bg-white px-3 py-2 text-[11px] font-bold text-[#111111] hover:bg-[#F5F5F3] transition-all"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                            Open in Spotify
+                          </a>
+                        )}
+                      </div>
+                    </div>
+
+                    {spotifyConnectionStatus && (
+                      <p className="text-sm text-red-600 font-medium">{spotifyConnectionStatus}</p>
+                    )}
+
+                    {spotifyExportError && (
+                      <p className="text-sm text-red-600 font-medium">{spotifyExportError}</p>
+                    )}
                   </div>
 
                   {/* Tracks Listing */}

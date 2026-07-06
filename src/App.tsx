@@ -772,6 +772,7 @@ export default function App() {
   } | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [playlistTitle, setPlaylistTitle] = useState("");
+  const [spotifyConnectionStatus, setSpotifyConnectionStatus] = useState<string | null>(null);
 
   const handleSpotifyLogout = () => {
     setSpotifyTokens(null);
@@ -889,32 +890,70 @@ export default function App() {
 
   const handleConnectSpotify = async () => {
     try {
-      const redirectUri = `${window.location.origin}/auth/callback`;
+      setSpotifyConnectionStatus(null);
+      const redirectUri = `${window.location.origin}/api/spotify/callback`;
       const response = await fetch(`/api/spotify/auth-url?redirect_uri=${encodeURIComponent(redirectUri)}`);
       if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.error || "Failed to fetch Spotify auth URL");
+        const errData = await response.json().catch(() => ({ error: "Failed to fetch Spotify auth URL" }));
+        const message = errData.error || "Could not initiate Spotify connection.";
+        setSpotifyConnectionStatus(message);
+        triggerToast(message);
+        return;
       }
-      const { url } = await response.json();
 
+      const { url } = await response.json();
       const width = 600;
       const height = 700;
       const left = window.screen.width / 2 - width / 2;
       const top = window.screen.height / 2 - height / 2;
+      const popupFeatures = `width=${width},height=${height},top=${top},left=${left},scrollbars=yes,resizable=yes`;
 
-      const authWindow = window.open(
-        url,
-        "spotify_oauth_popup",
-        `width=${width},height=${height},top=${top},left=${left}`
-      );
-
+      const authWindow = window.open(url, "spotify_oauth_popup", popupFeatures);
       if (!authWindow) {
-        alert("Please allow popups for this site to connect your Spotify account.");
+        window.location.href = url;
       }
     } catch (error: any) {
       console.error("Spotify auth URL error:", error);
-      triggerToast(error.message || "Could not initiate Spotify connection.");
+      const message = error.message || "Could not initiate Spotify connection.";
+      setSpotifyConnectionStatus(message);
+      triggerToast(message);
     }
+  };
+
+  const handleExportPlaylistToSpotify = async (playlist: Playlist) => {
+    const token = await getValidSpotifyToken();
+    if (!token) {
+      throw new Error("Please connect to Spotify first.");
+    }
+
+    if (!playlist.songs.length) {
+      throw new Error("This playlist has no songs to export yet.");
+    }
+
+    const response = await fetch("/api/spotify/export", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        accessToken: token,
+        playlistName: playlist.name,
+        songs: playlist.songs.map((song) => ({
+          songName: song.name,
+          artist: song.artist,
+        })),
+      }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "Failed to export playlist.");
+    }
+
+    return data as {
+      playlistUrl: string;
+      playlistName: string;
+      totalMatched: number;
+      totalRequested: number;
+    };
   };
 
   const handleSpotifyExport = async () => {
@@ -4205,6 +4244,11 @@ Explore the full analysis & recommendations on MoodLoop:
                 onReturnToStudio={() => setActiveWorkspaceTab("studio")}
                 subscriptionState={subscriptionState}
                 onGateFeature={gatePremiumFeature}
+                spotifyConnected={Boolean(spotifyTokens)}
+                spotifyUser={spotifyUser}
+                spotifyConnectionStatus={spotifyConnectionStatus}
+                onConnectSpotify={handleConnectSpotify}
+                onExportPlaylistToSpotify={handleExportPlaylistToSpotify}
               />
             )}
 

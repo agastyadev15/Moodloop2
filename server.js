@@ -796,10 +796,10 @@ async function generateContentWithRetry2(ai, params, maxRetries = 2) {
   throw lastError || new Error("Failed to generate content from Gemini after trying all fallbacks.");
 }
 app.get("/api/spotify/auth-url", (req, res) => {
-  const clientRedirectUri = req.query.redirect_uri || "http://localhost:3000/auth/callback";
+  const clientRedirectUri = req.query.redirect_uri || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}/api/spotify/callback` : "http://localhost:3000/api/spotify/callback");
   const client_id = process.env.SPOTIFY_CLIENT_ID || "";
   if (!client_id) {
-    return res.status(400).json({ error: "SPOTIFY_CLIENT_ID is not configured on the server." });
+    return res.status(500).json({ error: "Spotify sign-in is not configured on this server yet. Add SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET to enable account connection." });
   }
   const scopes = "playlist-modify-public playlist-modify-private user-read-private";
   const spotifyAuthUrl = `https://accounts.spotify.com/authorize?${new URLSearchParams({
@@ -812,9 +812,9 @@ app.get("/api/spotify/auth-url", (req, res) => {
   }).toString()}`;
   res.json({ url: spotifyAuthUrl });
 });
-app.get(["/auth/callback", "/auth/callback/"], async (req, res) => {
+app.get(["/api/spotify/callback", "/api/spotify/callback/", "/auth/callback", "/auth/callback/"], async (req, res) => {
   const { code, state } = req.query;
-  const redirectUri = state || `${req.protocol}://${req.get("host")}/auth/callback`;
+  const redirectUri = state || req.query.redirect_uri || `${req.protocol}://${req.get("host")}/api/spotify/callback`;
   if (!code) {
     return res.send(`
       <html>
